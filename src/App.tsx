@@ -1,11 +1,14 @@
 import React from 'react';
-import { ToastContainer } from 'react-toastify';
+import {
+  Provider as UrqlProvider,
+  createClient,
+  defaultExchanges,
+  subscriptionExchange,
+} from 'urql';
+import { SubscriptionClient } from 'subscriptions-transport-ws';
 import { MuiThemeProvider, createTheme } from '@material-ui/core/styles';
-import CssBaseline from '@material-ui/core/CssBaseline';
 import 'react-toastify/dist/ReactToastify.css';
-import Header from './components/Header';
-import Wrapper from './components/Wrapper';
-import NowWhat from './components/NowWhat';
+import Dashboard from './components/Dashboard';
 
 const theme = createTheme({
   palette: {
@@ -21,15 +24,28 @@ const theme = createTheme({
   },
 });
 
+const subscriptionClient = new SubscriptionClient(`${process.env.REACT_APP_WEBSOCKET_URL}`,
+  {
+    reconnect: true,
+    timeout: 20000,
+  });
+
+const client = createClient({
+  url: `${process.env.REACT_APP_API_BASE_URL}`,
+  exchanges: [
+    ...defaultExchanges,
+    subscriptionExchange({
+      forwardSubscription: operation => subscriptionClient.request(operation),
+    }),
+  ],
+});
+
 const App = () => (
-  <MuiThemeProvider theme={theme}>
-    <CssBaseline />
-    <Wrapper>
-      <Header />
-      <NowWhat />
-      <ToastContainer />
-    </Wrapper>
-  </MuiThemeProvider>
+  <UrqlProvider value={client}>
+    <MuiThemeProvider theme={theme}>
+      <Dashboard />
+    </MuiThemeProvider>
+  </UrqlProvider>
 );
 
 export default App;
